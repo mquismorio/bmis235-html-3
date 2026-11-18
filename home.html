@@ -36,7 +36,188 @@
      This box is empty on purpose. In Part 7 you paste an interactive
      graphic BETWEEN the opening <div> and the closing </div> below.
      ===================================================================== -->
-<div class="showcase"></div>
+<div class="showcase"><!-- HTML: three holiday buttons floating in a stage, plus a card that shows the joke or fun fact -->
+<div class="sc-wrap">
+  <div class="sc-stage">
+    <button type="button" class="sc-word" data-key="thanksgiving" data-name="Thanksgiving"><span class="sc-jiggle">Thanksgiving</span></button>
+    <button type="button" class="sc-word" data-key="christmas" data-name="Christmas"><span class="sc-jiggle">Christmas</span></button>
+    <button type="button" class="sc-word" data-key="newyear" data-name="New Year’s"><span class="sc-jiggle">New Year’s</span></button>
+  </div>
+  <div class="sc-card" aria-live="polite">
+    <div class="sc-card-title">Tap a holiday!</div>
+    <div class="sc-card-text">Catch one of the wiggly words to hear a joke or fun fact.</div>
+  </div>
+</div>
+
+<!-- CSS: brand colors and Garamond, the wiggle animation, and a layout that shrinks to fit phones -->
+<style>
+  .showcase .sc-wrap { max-width: 600px; margin: 0 auto; font-family: Garamond, serif; }
+  .showcase .sc-wrap, .showcase .sc-wrap * { box-sizing: border-box; }
+
+  .showcase .sc-stage {
+    position: relative; height: 280px; overflow: hidden;
+    background: #7f2c23; border-radius: 16px;
+  }
+
+  .showcase .sc-word {
+    position: absolute; top: 0; left: 0; margin: 0; padding: 10px 18px;
+    background: transparent; color: #F2E8D3;
+    border: 2px solid #F2E8D3; border-radius: 999px;
+    font-family: Garamond, serif; font-weight: bold; line-height: 1.1;
+    font-size: clamp(1.3rem, 6vw, 2rem);
+    white-space: nowrap; cursor: pointer; will-change: transform;
+  }
+  .showcase .sc-word:hover,
+  .showcase .sc-word:focus-visible,
+  .showcase .sc-word.sc-active { background: #F2E8D3; color: #7f2c23; outline: none; }
+
+  .showcase .sc-jiggle { display: inline-block; animation: sc-wiggle 1.2s ease-in-out infinite; }
+  .showcase .sc-word:nth-child(2) .sc-jiggle { animation-delay: -0.4s; }
+  .showcase .sc-word:nth-child(3) .sc-jiggle { animation-delay: -0.8s; }
+
+  @keyframes sc-wiggle {
+    0%, 100% { transform: rotate(-4deg) translateY(0); }
+    25%      { transform: rotate(3deg) translateY(-4px); }
+    50%      { transform: rotate(4deg) translateY(0); }
+    75%      { transform: rotate(-3deg) translateY(-4px); }
+  }
+
+  .showcase .sc-card {
+    margin-top: 12px; min-height: 110px; padding: 14px 18px;
+    background: #F2E8D3; color: #7f2c23;
+    border: 2px solid #7f2c23; border-radius: 16px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .showcase .sc-card-title { font-weight: bold; font-size: clamp(1.2rem, 5vw, 1.5rem); margin-bottom: 4px; }
+  .showcase .sc-card-text { font-size: clamp(1.05rem, 4vw, 1.3rem); line-height: 1.35; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .showcase .sc-jiggle { animation: none; }
+  }
+</style>
+
+<!-- JavaScript: drifts the words around and bounces them off the walls and each other, and swaps in a new joke on each click -->
+<script>
+(function () {
+  var root = document.querySelector('.showcase .sc-wrap');
+  if (!root) return;
+
+  var stage = root.querySelector('.sc-stage');
+  var title = root.querySelector('.sc-card-title');
+  var text = root.querySelector('.sc-card-text');
+  var buttons = [].slice.call(root.querySelectorAll('.sc-word'));
+
+  var jokes = {
+    thanksgiving: [
+      "Why did the turkey join the band? He already had the drumsticks!",
+      "What's a turkey's favorite dessert? Peach gobbler!",
+      "Why can't you take a turkey to church? They use fowl language!",
+      "Fun fact: leftover turkey sandwiches are the real main event."
+    ],
+    christmas: [
+      "What do you call Santa when he stops moving? Santa Pause!",
+      "Why is it so cold at Christmas? Because it's Decembrrrr!",
+      "What's Santa's favorite kind of music? Wrap!",
+      "Fun fact: some of the first artificial Christmas trees were made from dyed goose feathers."
+    ],
+    newyear: [
+      "What did the calendar say to the New Year? Your days are numbered!",
+      "My New Year's resolution is to stop procrastinating. I'll start tomorrow.",
+      "Fun fact: in Spain, people eat twelve grapes at midnight, one for each chime.",
+      "Fun fact: \u201CAuld Lang Syne\u201D is based on a Scottish poem by Robert Burns."
+    ]
+  };
+  var counts = { thanksgiving: 0, christmas: 0, newyear: 0 };
+
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var W = 0, H = 0;
+
+  var items = buttons.map(function (el) {
+    var speed = 40 + Math.random() * 30;
+    var angle = Math.random() * Math.PI * 2;
+    var it = { el: el, x: 0, y: 0, w: 0, h: 0, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, hold: false };
+    el.addEventListener('mouseenter', function () { it.hold = true; });
+    el.addEventListener('mouseleave', function () { it.hold = false; });
+    el.addEventListener('click', function () { show(el); });
+    return it;
+  });
+
+  function show(el) {
+    var key = el.getAttribute('data-key');
+    var list = jokes[key];
+    title.textContent = el.getAttribute('data-name');
+    text.textContent = list[counts[key] % list.length];
+    counts[key]++;
+    buttons.forEach(function (b) { b.classList.toggle('sc-active', b === el); });
+  }
+
+  function draw(it) {
+    it.el.style.transform = 'translate(' + it.x + 'px,' + it.y + 'px)';
+  }
+
+  function measure() {
+    W = stage.clientWidth;
+    H = stage.clientHeight;
+    items.forEach(function (it, i) {
+      it.w = it.el.offsetWidth;
+      it.h = it.el.offsetHeight;
+      if (reduce) {
+        it.x = (W - it.w) / 2;
+        it.y = (i + 0.5) * (H / items.length) - it.h / 2;
+      } else {
+        it.x = Math.max(0, Math.min(it.x, W - it.w));
+        it.y = Math.max(0, Math.min(it.y, H - it.h));
+      }
+      draw(it);
+    });
+  }
+
+  function collide(a, b) {
+    var ox = Math.min(a.x + a.w - b.x, b.x + b.w - a.x);
+    var oy = Math.min(a.y + a.h - b.y, b.y + b.h - a.y);
+    if (ox <= 0 || oy <= 0) return;
+    var t;
+    if (ox < oy) {
+      t = a.vx; a.vx = b.vx; b.vx = t;
+      if (a.x < b.x) { a.x -= ox / 2; b.x += ox / 2; } else { a.x += ox / 2; b.x -= ox / 2; }
+    } else {
+      t = a.vy; a.vy = b.vy; b.vy = t;
+      if (a.y < b.y) { a.y -= oy / 2; b.y += oy / 2; } else { a.y += oy / 2; b.y -= oy / 2; }
+    }
+  }
+
+  var last = 0;
+  function tick(now) {
+    var dt = Math.min((now - last) / 1000, 0.05);
+    last = now;
+    items.forEach(function (it) {
+      if (it.hold) return;
+      it.x += it.vx * dt;
+      it.y += it.vy * dt;
+      if (it.x < 0) { it.x = 0; it.vx = Math.abs(it.vx); }
+      if (it.x > W - it.w) { it.x = W - it.w; it.vx = -Math.abs(it.vx); }
+      if (it.y < 0) { it.y = 0; it.vy = Math.abs(it.vy); }
+      if (it.y > H - it.h) { it.y = H - it.h; it.vy = -Math.abs(it.vy); }
+    });
+    for (var i = 0; i < items.length; i++) {
+      for (var j = i + 1; j < items.length; j++) collide(items[i], items[j]);
+    }
+    items.forEach(draw);
+    requestAnimationFrame(tick);
+  }
+
+  // Start each word in its own horizontal lane so they don't overlap at first
+  measure();
+  items.forEach(function (it, i) {
+    it.x = Math.random() * Math.max(0, W - it.w);
+    it.y = (i + 0.5) * (H / items.length) - it.h / 2;
+    draw(it);
+  });
+
+  window.addEventListener('resize', measure);
+  if (!reduce) requestAnimationFrame(function (t) { last = t; tick(t); });
+})();
+</script></div>
 
 <p>Questions? Concerns?</p>
  <p> <a href="mailto:mquismorio@zagmail.gonzaga.edu">Email me</a> </p>
